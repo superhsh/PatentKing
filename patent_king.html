@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>特許法 마스터 — 테마특허법 암기 게임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700;900&family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d0f14; --bg2:#141720; --bg3:#1c2030; --border:#2a2f42;
+  --gold:#c9a84c; --gold2:#e8c96a; --gold-dim:rgba(201,168,76,0.15);
+  --red:#e05252; --green:#52c97a; --blue:#5b8af0; --purple:#9b6ef0;
+  --orange:#e07b52;
+  --text:#e8e6e0; --text2:#9a9585; --text3:#5c584f;
+  --card-front:#181c27; --card-back:#16201e;
+  --shadow:0 20px 60px rgba(0,0,0,0.6); --radius:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+.bg-texture{position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(201,168,76,.06) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 80%,rgba(91,138,240,.05) 0%,transparent 60%);}
+.bg-grid{position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px;opacity:.18;}
+
+#app{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:24px 16px;}
+.screen{display:none;}
+.screen.active{display:block;animation:fadeUp .4s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+/* ── Header ── */
+.game-header{text-align:center;padding:40px 0 28px;}
+.game-title{font-family:'Noto Serif KR',serif;font-size:clamp(26px,6vw,50px);font-weight:900;letter-spacing:-1px;background:linear-gradient(135deg,var(--gold2) 0%,var(--gold) 50%,#a07830 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1;}
+.game-subtitle{margin-top:8px;font-size:12px;color:var(--text2);letter-spacing:3px;text-transform:uppercase;font-weight:300;}
+
+/* ── Stats ── */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:20px 0;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;transition:border-color .2s;}
+.stat-card:hover{border-color:var(--gold);}
+.stat-val{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;color:var(--gold2);line-height:1;}
+.stat-label{font-size:10px;color:var(--text3);margin-top:4px;letter-spacing:1px;}
+
+/* ── Mastery Track Indicator ── */
+.mastery-tracks{display:flex;gap:8px;margin:16px 0;flex-wrap:wrap;}
+.track-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid;}
+.track-pill.fc{border-color:var(--blue);color:var(--blue);background:rgba(91,138,240,.1);}
+.track-pill.sub{border-color:var(--purple);color:var(--purple);background:rgba(155,110,240,.1);}
+.track-pill.done{border-color:var(--green);color:var(--green);background:rgba(82,201,122,.1);}
+
+/* ── Section ── */
+.section-title{font-family:'Noto Serif KR',serif;font-size:12px;color:var(--gold);letter-spacing:3px;text-transform:uppercase;margin-bottom:14px;padding-bottom:7px;border-bottom:1px solid var(--border);}
+
+/* ── Category ── */
+.category-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:9px;margin-bottom:28px;}
+.cat-btn{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:13px 15px;cursor:pointer;text-align:left;transition:all .2s;position:relative;overflow:hidden;}
+.cat-btn::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold);opacity:0;transition:opacity .2s;}
+.cat-btn:hover,.cat-btn.selected{border-color:var(--gold);background:var(--gold-dim);}
+.cat-btn:hover::before,.cat-btn.selected::before{opacity:1;}
+.cat-name{font-size:12px;font-weight:700;color:var(--text);display:block;}
+.cat-meta{font-size:10px;color:var(--text3);margin-top:3px;}
+.cat-tracks{display:flex;gap:4px;margin-top:6px;}
+.cat-track-bar{flex:1;height:3px;border-radius:2px;background:var(--border);overflow:hidden;}
+.cat-track-fill-fc{height:100%;background:var(--blue);border-radius:2px;transition:width .4s;}
+.cat-track-fill-sub{height:100%;background:var(--purple);border-radius:2px;transition:width .4s;}
+
+/* ── Buttons ── */
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:20px 0;}
+.btn{padding:13px 26px;border-radius:10px;font-family:'Noto Sans KR',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all .2s;letter-spacing:.5px;}
+.btn-primary{background:linear-gradient(135deg,var(--gold) 0%,#a07830 100%);color:#0d0f14;box-shadow:0 4px 20px rgba(201,168,76,.3);}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(201,168,76,.4);}
+.btn-secondary{background:var(--bg2);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--gold);color:var(--gold);}
+.btn-purple{background:linear-gradient(135deg,var(--purple) 0%,#6b4eb0 100%);color:#fff;box-shadow:0 4px 20px rgba(155,110,240,.3);}
+.btn-purple:hover{transform:translateY(-2px);box-shadow:0 6px 28px rgba(155,110,240,.4);}
+.btn-blue{background:linear-gradient(135deg,var(--blue) 0%,#3a5fc0 100%);color:#fff;box-shadow:0 4px 20px rgba(91,138,240,.3);}
+.btn-blue:hover{transform:translateY(-2px);}
+.btn-sm{padding:8px 14px;font-size:12px;border-radius:8px;}
+.btn-green{background:var(--green);color:#0d0f14;}
+.btn-red{background:var(--red);color:#fff;}
+.due-badge{display:inline-block;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:20px;margin-left:5px;vertical-align:middle;}
+
+/* ── Mode Grid ── */
+.mode-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:20px 0;}
+.mode-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:22px;cursor:pointer;transition:all .25s;text-align:center;position:relative;overflow:hidden;}
+.mode-card::after{content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s;}
+.mode-card:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,.4);}
+.mode-card.fc-mode:hover{border-color:var(--blue);}
+.mode-card.fc-mode::after{background:rgba(91,138,240,.05);}
+.mode-card.sub-mode:hover{border-color:var(--purple);}
+.mode-card.sub-mode::after{background:rgba(155,110,240,.05);}
+.mode-card.quiz-mode:hover{border-color:var(--orange);}
+.mode-card.review-mode:hover{border-color:var(--green);}
+.mode-card.stat-mode:hover{border-color:var(--gold);}
+.mode-card:hover::after{opacity:1;}
+.mode-icon{font-size:32px;margin-bottom:10px;}
+.mode-title{font-weight:700;font-size:15px;margin-bottom:5px;}
+.mode-desc{font-size:11px;color:var(--text2);line-height:1.5;}
+.mode-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;margin-top:6px;letter-spacing:1px;}
+.badge-blue{background:rgba(91,138,240,.2);color:var(--blue);border:1px solid rgba(91,138,240,.3);}
+.badge-purple{background:rgba(155,110,240,.2);color:var(--purple);border:1px solid rgba(155,110,240,.3);}
+.badge-orange{background:rgba(224,123,82,.2);color:var(--orange);border:1px solid rgba(224,123,82,.3);}
+.badge-green{background:rgba(82,201,122,.2);color:var(--green);border:1px solid rgba(82,201,122,.3);}
+.badge-gold{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(201,168,76,.3);}
+
+/* ═══ SHARED SCREEN HEADER ═══ */
+.fc-header{display:flex;align-items:center;gap:12px;margin-bottom:22px;}
+.fc-back-btn{background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:8px 13px;border-radius:8px;font-size:13px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.fc-back-btn:hover{border-color:var(--gold);color:var(--gold);}
+.fc-progress-wrap{flex:1;}
+.fc-progress-bar{height:4px;background:var(--border);border-radius:2px;}
+.fc-progress-fill{height:100%;background:var(--gold);border-radius:2px;transition:width .4s;}
+.fc-progress-fill.blue{background:var(--blue);}
+.fc-progress-fill.purple{background:var(--purple);}
+.fc-counter{font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);margin-top:4px;}
+.mode-label-pill{font-size:11px;font-family:'DM Mono',monospace;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+.mlp-fc{background:rgba(91,138,240,.15);color:var(--blue);border:1px solid rgba(91,138,240,.3);}
+.mlp-sub{background:rgba(155,110,240,.15);color:var(--purple);border:1px solid rgba(155,110,240,.3);}
+.mlp-quiz{background:rgba(224,123,82,.15);color:var(--orange);border:1px solid rgba(224,123,82,.3);}
+.mlp-review{background:rgba(82,201,122,.15);color:var(--green);border:1px solid rgba(82,201,122,.3);}
+
+/* ═══ FLASHCARD ═══ */
+.card-scene{perspective:1200px;margin:0 auto 20px;max-width:680px;height:320px;cursor:pointer;}
+.card-3d{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.4,0,.2,1);}
+.card-3d.flipped{transform:rotateY(180deg);}
+.card-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:20px;padding:32px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border:1px solid var(--border);box-shadow:var(--shadow);}
+.card-front{background:var(--card-front);}
+.card-back{background:var(--card-back);transform:rotateY(180deg);text-align:left;align-items:flex-start;justify-content:flex-start;overflow-y:auto;}
+.card-law-badge{font-family:'DM Mono',monospace;font-size:11px;color:var(--gold);background:var(--gold-dim);border:1px solid rgba(201,168,76,.3);padding:3px 10px;border-radius:20px;margin-bottom:16px;letter-spacing:1px;}
+.card-cat-badge{font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;}
+.card-question{font-family:'Noto Serif KR',serif;font-size:clamp(17px,3vw,22px);font-weight:700;color:var(--text);line-height:1.5;}
+.card-hint{font-size:11px;color:var(--text3);margin-top:18px;}
+.card-field-label{font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;font-family:'DM Mono',monospace;}
+.card-answer{font-size:14px;line-height:1.9;color:var(--text);}
+.card-answer strong{color:var(--gold2);font-weight:700;}
+
+/* Rating */
+.rating-area{display:none;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 auto;max-width:680px;}
+.rating-area.visible{display:flex;}
+.rating-btn{flex:1;min-width:70px;max-width:150px;padding:12px 8px;border-radius:12px;border:1px solid var(--border);font-family:'Noto Sans KR',sans-serif;font-size:12px;font-weight:700;cursor:pointer;background:var(--bg2);transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.rating-btn .emoji{font-size:18px;}
+.rating-btn .days{font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;}
+.r-again{border-color:var(--red);color:var(--red);} .r-again:hover{background:rgba(224,82,82,.15);}
+.r-hard{border-color:var(--orange);color:var(--orange);} .r-hard:hover{background:rgba(224,123,82,.15);}
+.r-good{border-color:var(--blue);color:var(--blue);} .r-good:hover{background:rgba(91,138,240,.15);}
+.r-easy{border-color:var(--green);color:var(--green);} .r-easy:hover{background:rgba(82,201,122,.15);}
+
+/* ═══ SUBJECTIVE (주관식) ═══ */
+.sub-wrap{max-width:680px;margin:0 auto;}
+.sub-question-card{background:var(--bg2);border:1px solid rgba(155,110,240,.4);border-radius:20px;padding:28px;margin-bottom:18px;}
+.sub-law{font-family:'DM Mono',monospace;font-size:11px;color:var(--purple);margin-bottom:8px;}
+.sub-field-tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(155,110,240,.15);color:var(--purple);border:1px solid rgba(155,110,240,.3);margin-bottom:10px;letter-spacing:1px;font-family:'DM Mono',monospace;}
+.sub-q-text{font-family:'Noto Serif KR',serif;font-size:clamp(16px,2.5vw,20px);font-weight:700;line-height:1.6;color:var(--text);}
+.sub-blanks-wrap{margin-top:16px;}
+.sub-blank-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;}
+.sub-blank-num{font-family:'DM Mono',monospace;font-size:12px;color:var(--purple);min-width:20px;padding-top:11px;}
+.sub-blank-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-family:'Noto Sans KR',sans-serif;font-size:14px;color:var(--text);outline:none;resize:none;transition:border-color .2s;min-height:44px;}
+.sub-blank-input:focus{border-color:var(--purple);}
+.sub-blank-input.graded-correct{border-color:var(--green);background:rgba(82,201,122,.07);}
+.sub-blank-input.graded-partial{border-color:var(--gold);background:rgba(201,168,76,.07);}
+.sub-blank-input.graded-wrong{border-color:var(--red);background:rgba(224,82,82,.07);}
+.sub-textarea{width:100%;background:var(--bg3);border:1.5px solid rgba(155,110,240,.3);border-radius:12px;padding:14px 16px;font-family:'Noto Sans KR',sans-serif;font-size:14px;color:var(--text);outline:none;resize:vertical;min-height:100px;transition:border-color .2s;line-height:1.8;}
+.sub-textarea:focus{border-color:var(--purple);}
+.sub-hint-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.sub-hint-txt{font-size:11px;color:var(--text3);}
+.sub-char-count{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);}
+.keyword-hint-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;color:var(--text3);cursor:pointer;transition:all .2s;}
+.keyword-hint-btn:hover{border-color:var(--purple);color:var(--purple);}
+
+/* Grade result */
+.grade-result{margin-top:16px;border-radius:14px;overflow:hidden;border:1px solid var(--border);}
+.grade-header{padding:14px 18px;display:flex;align-items:center;gap:10px;}
+.grade-score-circle{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:14px;font-weight:700;flex-shrink:0;}
+.gc-perfect{background:rgba(82,201,122,.2);color:var(--green);border:2px solid var(--green);}
+.gc-good{background:rgba(91,138,240,.2);color:var(--blue);border:2px solid var(--blue);}
+.gc-partial{background:rgba(201,168,76,.2);color:var(--gold);border:2px solid var(--gold);}
+.gc-fail{background:rgba(224,82,82,.2);color:var(--red);border:2px solid var(--red);}
+.grade-msg{font-size:13px;font-weight:700;}
+.grade-sub-msg{font-size:11px;color:var(--text2);margin-top:2px;}
+.grade-body{padding:14px 18px;background:var(--bg3);}
+.grade-comparison{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.gc-panel{border-radius:10px;padding:12px;}
+.gc-panel-your{background:rgba(91,138,240,.08);border:1px solid rgba(91,138,240,.2);}
+.gc-panel-correct{background:rgba(82,201,122,.08);border:1px solid rgba(82,201,122,.2);}
+.gc-panel-label{font-size:10px;letter-spacing:1.5px;font-weight:700;margin-bottom:6px;text-transform:uppercase;font-family:'DM Mono',monospace;}
+.gpl-your{color:var(--blue);}
+.gpl-correct{color:var(--green);}
+.gc-panel-text{font-size:13px;line-height:1.7;color:var(--text);}
+.kw-match-row{margin-top:12px;}
+.kw-label{font-size:10px;color:var(--text3);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;font-family:'DM Mono',monospace;}
+.kw-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.kw-chip{font-size:11px;padding:3px 9px;border-radius:20px;font-family:'DM Mono',monospace;}
+.kw-hit{background:rgba(82,201,122,.15);color:var(--green);border:1px solid rgba(82,201,122,.3);}
+.kw-miss{background:rgba(224,82,82,.1);color:var(--red);border:1px solid rgba(224,82,82,.3);}
+.self-eval-row{display:flex;gap:8px;margin-top:14px;justify-content:center;}
+.self-eval-btn{padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .2s;}
+.seb-correct{background:rgba(82,201,122,.2);color:var(--green);border:1px solid var(--green);}
+.seb-correct:hover{background:var(--green);color:#0d0f14;}
+.seb-wrong{background:rgba(224,82,82,.15);color:var(--red);border:1px solid var(--red);}
+.seb-wrong:hover{background:var(--red);color:#fff;}
+
+/* ═══ QUIZ ═══ */
+.quiz-question-card{background:var(--bg2);border:1px solid rgba(224,123,82,.3);border-radius:20px;padding:28px;margin-bottom:18px;max-width:680px;margin:0 auto 18px;}
+.quiz-q-law{font-family:'DM Mono',monospace;font-size:11px;color:var(--orange);margin-bottom:8px;}
+.quiz-q-text{font-family:'Noto Serif KR',serif;font-size:clamp(15px,2.5vw,19px);font-weight:700;line-height:1.6;color:var(--text);}
+.quiz-options{display:flex;flex-direction:column;gap:9px;max-width:680px;margin:0 auto 20px;}
+.quiz-opt{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 18px;cursor:pointer;font-size:13px;line-height:1.6;color:var(--text);transition:all .2s;text-align:left;display:flex;align-items:flex-start;gap:11px;}
+.quiz-opt:hover:not(.locked){border-color:var(--orange);background:rgba(224,123,82,.08);}
+.quiz-opt .opt-num{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);min-width:18px;padding-top:1px;}
+.quiz-opt.correct{border-color:var(--green);background:rgba(82,201,122,.1);}
+.quiz-opt.correct .opt-num{color:var(--green);}
+.quiz-opt.wrong{border-color:var(--red);background:rgba(224,82,82,.1);}
+.quiz-opt.wrong .opt-num{color:var(--red);}
+.quiz-opt.locked{cursor:default;}
+.quiz-feedback{max-width:680px;margin:0 auto 14px;padding:14px 18px;border-radius:12px;font-size:13px;line-height:1.7;display:none;}
+.quiz-feedback.cfb{background:rgba(82,201,122,.1);border:1px solid var(--green);color:var(--green);}
+.quiz-feedback.wfb{background:rgba(224,82,82,.07);border:1px solid var(--red);}
+.quiz-feedback.wfb .fb-correct{color:var(--green);font-weight:700;}
+
+/* ═══ RESULT ═══ */
+.result-card{background:var(--bg2);border:1px solid var(--gold);border-radius:20px;padding:40px 32px;text-align:center;max-width:540px;margin:0 auto;}
+.result-score{font-family:'DM Mono',monospace;font-size:64px;font-weight:500;color:var(--gold2);line-height:1;}
+.result-breakdown{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:28px 0;}
+.rb-item{text-align:center;}
+.rb-val{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;}
+.rb-lab{font-size:10px;color:var(--text3);margin-top:3px;}
+.rb-c .rb-val{color:var(--green);} .rb-w .rb-val{color:var(--red);} .rb-n .rb-val{color:var(--text2);}
+
+/* ═══ PROGRESS ═══ */
+.prog-row{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px;transition:border-color .2s;}
+.prog-row:hover{border-color:var(--border);}
+.progress-grid{display:flex;flex-direction:column;gap:8px;}
+.prog-law{font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);min-width:90px;}
+.prog-name{flex:1;font-size:12px;color:var(--text2);}
+.prog-tracks{display:flex;flex-direction:column;gap:3px;width:70px;}
+.prog-track-row{display:flex;align-items:center;gap:4px;}
+.pt-label{font-size:9px;font-family:'DM Mono',monospace;width:18px;}
+.ptl-fc{color:var(--blue);} .ptl-sub{color:var(--purple);}
+.pt-bar{flex:1;height:3px;background:var(--border);border-radius:2px;}
+.pt-fill-fc{height:100%;background:var(--blue);border-radius:2px;}
+.pt-fill-sub{height:100%;background:var(--purple);border-radius:2px;}
+.mastered-tag{font-size:9px;color:var(--green);background:rgba(82,201,122,.1);padding:2px 6px;border-radius:4px;font-family:'DM Mono',monospace;white-space:nowrap;}
+.learning-tag{font-size:9px;color:var(--gold);background:var(--gold-dim);padding:2px 6px;border-radius:4px;font-family:'DM Mono',monospace;white-space:nowrap;}
+.new-tag{font-size:9px;color:var(--text3);background:var(--bg3);padding:2px 6px;border-radius:4px;font-family:'DM Mono',monospace;white-space:nowrap;}
+
+/* ── Nav Tabs ── */
+.nav-tabs{display:flex;gap:3px;margin-bottom:20px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:3px;}
+.nav-tab{flex:1;padding:8px 4px;border-radius:8px;background:transparent;border:none;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;font-family:'Noto Sans KR',sans-serif;}
+.nav-tab.active{background:var(--gold);color:#0d0f14;font-weight:700;}
+.nav-tab:hover:not(.active){color:var(--text);background:var(--bg3);}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px 18px;font-size:13px;color:var(--text);z-index:1000;transition:transform .3s ease;pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ── Streak ── */
+.streak-badge{display:inline-flex;align-items:center;gap:6px;background:var(--gold-dim);border:1px solid rgba(201,168,76,.3);border-radius:20px;padding:6px 14px;font-size:13px;color:var(--gold2);font-weight:700;margin-bottom:20px;}
+
+/* ── Mastery info box ── */
+.mastery-info{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:0 0 20px;font-size:12px;color:var(--text2);line-height:1.8;}
+.mastery-info strong{color:var(--gold2);}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;} ::-webkit-scrollbar-track{background:var(--bg2);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;} ::-webkit-scrollbar-thumb:hover{background:var(--gold);}
+@media(max-width:600px){.stats-row{grid-template-columns:repeat(3,1fr);}.mode-grid{grid-template-columns:1fr;}.card-scene{height:270px;}.card-face{padding:22px;}.grade-comparison{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="bg-texture"></div>
+<div class="bg-grid"></div>
+<div id="app">
+
+<!-- ═══ HOME ═══ -->
+<div id="screen-home" class="screen active">
+  <div class="game-header">
+    <div class="game-title">特許法 마스터</div>
+    <div class="game-subtitle">테마특허법 제9판 · 간격반복 + 주관식 이중 암기 시스템</div>
+  </div>
+
+  <div id="streak-area" class="streak-badge" style="display:none">
+    🔥 <span id="streak-num">0</span>일 연속 학습 중
+  </div>
+
+  <div class="mastery-info">
+    <strong>완전 암기 기준 (이중 트랙)</strong>: 
+    <span style="color:var(--blue)">🃏 플래시카드</span> 복습 간격 21일 이상 달성
+    <strong>+</strong> 
+    <span style="color:var(--purple)">✍️ 주관식</span> 정답 3회 이상 → 두 조건을 모두 충족해야 
+    <span style="color:var(--green)">⭐ 완전 암기</span>로 인정됩니다.
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val" id="stat-total">0</div><div class="stat-label">전체 카드</div></div>
+    <div class="stat-card"><div class="stat-val" id="stat-due" style="color:var(--red)">0</div><div class="stat-label">복습 예정</div></div>
+    <div class="stat-card"><div class="stat-val" id="stat-sub-due" style="color:var(--purple)">0</div><div class="stat-label">주관식 예정</div></div>
+    <div class="stat-card"><div class="stat-val" id="stat-learned" style="color:var(--blue)">0</div><div class="stat-label">플래시 학습완료</div></div>
+    <div class="stat-card"><div class="stat-val" id="stat-mastered" style="color:var(--gold2)">0</div><div class="stat-label">⭐ 완전 암기</div></div>
+  </div>
+
+  <div id="cat-section">
+    <div class="section-title">▸ 카테고리 선택 (미선택 시 전체)</div>
+    <div class="category-grid" id="category-grid"></div>
+  </div>
+
+  <div class="section-title">▸ 학습 모드</div>
+  <div class="mode-grid" style="grid-template-columns:repeat(3,1fr);">
+    <div class="mode-card fc-mode" onclick="startMode('flashcard')">
+      <div class="mode-icon">🃏</div>
+      <div class="mode-title">플래시카드</div>
+      <div class="mode-desc">카드 뒤집기 후 자기평가<br>망각곡선 자동 스케줄</div>
+      <div class="mode-badge badge-blue">FC 트랙</div>
+    </div>
+    <div class="mode-card sub-mode" onclick="startMode('subjective')">
+      <div class="mode-icon">✍️</div>
+      <div class="mode-title">주관식 쓰기</div>
+      <div class="mode-desc">의의·취지·요건을 직접 기술<br>키워드 자동 채점 + 자기평가</div>
+      <div class="mode-badge badge-purple">SUB 트랙</div>
+    </div>
+    <div class="mode-card quiz-mode" onclick="startMode('quiz')">
+      <div class="mode-icon">✏️</div>
+      <div class="mode-title">4지선다 퀴즈</div>
+      <div class="mode-desc">선택형으로 빠른 점검</div>
+      <div class="mode-badge badge-orange">QUIZ</div>
+    </div>
+    <div class="mode-card review-mode" onclick="startMode('review')">
+      <div class="mode-icon">🔁</div>
+      <div class="mode-title">오늘의 복습</div>
+      <div class="mode-desc">복습 기한 도래한 FC 카드<br>집중 반복</div>
+      <div class="mode-badge badge-green">DUE ONLY</div>
+    </div>
+    <div class="mode-card sub-mode" onclick="startMode('sub-review')">
+      <div class="mode-icon">📝</div>
+      <div class="mode-title">주관식 복습</div>
+      <div class="mode-desc">주관식 복습 예정 카드만<br>집중 쓰기 훈련</div>
+      <div class="mode-badge badge-purple">SUB DUE</div>
+    </div>
+    <div class="mode-card stat-mode" onclick="showScreen('screen-progress')">
+      <div class="mode-icon">📊</div>
+      <div class="mode-title">학습 현황</div>
+      <div class="mode-desc">FC·주관식 트랙별 진도<br>다음 복습일 조회</div>
+      <div class="mode-badge badge-gold">STATS</div>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:12px;">
+    <button class="btn btn-secondary btn-sm" onclick="resetAll()">🗑 전체 초기화</button>
+  </div>
+</div>
+
+<!-- ═══ FLASHCARD ═══ -->
+<div id="screen-flashcard" class="screen">
+  <div class="fc-header">
+    <button class="fc-back-btn" onclick="goHome()">← 홈</button>
+    <div class="fc-progress-wrap">
+      <div class="fc-progress-bar"><div class="fc-progress-fill" id="fc-prog-fill" style="width:0%"></div></div>
+      <div class="fc-counter" id="fc-counter">0 / 0</div>
+    </div>
+    <span class="mode-label-pill mlp-fc" id="fc-mode-label">FLASH</span>
+  </div>
+
+  <div class="card-scene" id="card-scene" onclick="flipCard()">
+    <div class="card-3d" id="card-3d">
+      <div class="card-face card-front">
+        <div class="card-cat-badge" id="fc-cat-badge"></div>
+        <div class="card-law-badge" id="fc-law-badge"></div>
+        <div class="card-question" id="fc-question"></div>
+        <div class="card-hint">카드를 클릭하여 정답 확인 ↓</div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-field-label" id="fc-field-label"></div>
+        <div class="card-answer" id="fc-answer"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rating-area" id="rating-area">
+    <button class="rating-btn r-again" onclick="rateCard(0)"><span class="emoji">❌</span><span>다시</span><span class="days" id="r0-days"></span></button>
+    <button class="rating-btn r-hard" onclick="rateCard(1)"><span class="emoji">😰</span><span>어려움</span><span class="days" id="r1-days"></span></button>
+    <button class="rating-btn r-good" onclick="rateCard(2)"><span class="emoji">👍</span><span>보통</span><span class="days" id="r2-days"></span></button>
+    <button class="rating-btn r-easy" onclick="rateCard(3)"><span class="emoji">⚡</span><span>쉬움</span><span class="days" id="r3-days"></span></button>
+  </div>
+  <div style="text-align:center;margin-top:16px;">
+    <button class="btn btn-secondary btn-sm" onclick="skipCard()">건너뛰기 →</button>
+  </div>
+</div>
+
+<!-- ═══ SUBJECTIVE ═══ -->
+<div id="screen-subjective" class="screen">
+  <div class="fc-header">
+    <button class="fc-back-btn" onclick="goHome()">← 홈</button>
+    <div class="fc-progress-wrap">
+      <div class="fc-progress-bar"><div class="fc-progress-fill purple" id="sub-prog-fill" style="width:0%"></div></div>
+      <div class="fc-counter" id="sub-counter">0 / 0</div>
+    </div>
+    <span class="mode-label-pill mlp-sub" id="sub-mode-label">WRITE</span>
+  </div>
+
+  <div class="sub-wrap">
+    <div class="sub-question-card">
+      <div class="sub-law" id="sub-law-badge"></div>
+      <div class="sub-field-tag" id="sub-field-tag"></div>
+      <div class="sub-q-text" id="sub-question"></div>
+    </div>
+
+    <div id="sub-blanks-container"></div>
+
+    <div id="grade-result-area"></div>
+
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;" id="sub-submit-row">
+      <button class="btn btn-purple" onclick="gradeSubjective()">✓ 채점하기</button>
+      <button class="btn btn-secondary btn-sm" onclick="skipSubCard()">건너뛰기</button>
+    </div>
+    <div id="sub-next-row" style="display:none;text-align:center;margin-top:12px;">
+      <button class="btn btn-purple" onclick="nextSubCard()">다음 문제 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ QUIZ ═══ -->
+<div id="screen-quiz" class="screen">
+  <div class="fc-header">
+    <button class="fc-back-btn" onclick="goHome()">← 홈</button>
+    <div class="fc-progress-wrap">
+      <div class="fc-progress-bar"><div class="fc-progress-fill" id="quiz-prog-fill" style="width:0%"></div></div>
+      <div class="fc-counter" id="quiz-counter">0 / 0</div>
+    </div>
+    <span class="mode-label-pill mlp-quiz">QUIZ</span>
+  </div>
+
+  <div class="quiz-question-card">
+    <div class="quiz-q-law" id="quiz-law-badge"></div>
+    <div class="quiz-q-text" id="quiz-question"></div>
+  </div>
+  <div class="quiz-options" id="quiz-options"></div>
+  <div class="quiz-feedback" id="quiz-feedback"></div>
+  <div style="text-align:center;max-width:680px;margin:0 auto;">
+    <button class="btn btn-blue" id="quiz-next-btn" onclick="nextQuiz()" style="display:none">다음 문제 →</button>
+  </div>
+</div>
+
+<!-- ═══ RESULT ═══ -->
+<div id="screen-result" class="screen">
+  <div style="padding:40px 0 28px;text-align:center;">
+    <div style="font-family:'Noto Serif KR',serif;font-size:22px;font-weight:900;color:var(--gold2);margin-bottom:6px;">세션 완료! 🎉</div>
+  </div>
+  <div class="result-card">
+    <div class="result-score" id="res-score">0%</div>
+    <div style="font-size:13px;color:var(--text2);margin-top:6px;" id="res-mode-label"></div>
+    <div class="result-breakdown">
+      <div class="rb-item rb-c"><div class="rb-val" id="res-correct">0</div><div class="rb-lab">정답</div></div>
+      <div class="rb-item rb-w"><div class="rb-val" id="res-wrong">0</div><div class="rb-lab">오답</div></div>
+      <div class="rb-item rb-n"><div class="rb-val" id="res-new">0</div><div class="rb-lab">새 카드</div></div>
+    </div>
+    <div id="res-mastery-gained" style="font-size:13px;color:var(--gold2);margin-bottom:16px;"></div>
+    <div id="res-next-due" style="font-size:12px;color:var(--text2);margin-bottom:20px;"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="startMode(currentMode)">다시 학습</button>
+      <button class="btn btn-secondary" onclick="goHome()">홈으로</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PROGRESS ═══ -->
+<div id="screen-progress" class="screen">
+  <div class="fc-header" style="margin-bottom:20px;">
+    <button class="fc-back-btn" onclick="goHome()">← 홈</button>
+    <div style="flex:1;text-align:center;font-family:'Noto Serif KR',serif;font-size:15px;font-weight:700;color:var(--gold);">학습 현황</div>
+  </div>
+  <div class="nav-tabs" id="prog-tabs">
+    <button class="nav-tab active" onclick="filterProgress('all',this)">전체</button>
+    <button class="nav-tab" onclick="filterProgress('new',this)">신규</button>
+    <button class="nav-tab" onclick="filterProgress('learning',this)">학습중</button>
+    <button class="nav-tab" onclick="filterProgress('mastered',this)">⭐완전암기</button>
+    <button class="nav-tab" onclick="filterProgress('due',this)">복습예정</button>
+  </div>
+  <div class="progress-grid" id="progress-grid"></div>
+</div>
+
+</div><!-- /app -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CARD DATA
+// ═══════════════════════════════════════════════════════════
+// Each card has: keywords[] = key terms for subjective grading
+// blanks[] = array of {label, answer, keywords} for fill-in mode
+const CARDS = [
+// ── 특허요건 ──────────────────────────────────────────────────
+{id:'PQ01',cat:'특허요건',law:'法2ⅰ',sub:'발명의 정의',field:'의의',
+ q:'法2ⅰ — 발명의 정의는?',
+ a:'<strong>자연법칙을 이용한 기술적 사상의 창작으로서 고도한 것</strong>',
+ keywords:['자연법칙','이용','기술적 사상','창작','고도']},
+{id:'PQ02',cat:'특허요건',law:'法2ⅰ',sub:'발명의 정의',field:'취지',
+ q:'발명의 정의 규정(法2ⅰ)의 입법 취지는?',
+ a:'<strong>법적용의 편리성 및 예측가능성 도모</strong>',
+ keywords:['법적용','편리','예측가능성']},
+{id:'PQ03',cat:'특허요건',law:'法2ⅰ',sub:'발명의 정의',field:'요건',
+ q:'法2ⅰ 발명 성립의 4가지 요건은?',
+ a:'① 자연법칙을 이용할 것<br>② 기술적 사상일 것<br>③ 창작성<br>④ 고도성',
+ keywords:['자연법칙','기술적 사상','창작성','고도성']},
+{id:'PQ04',cat:'특허요건',law:'法29①本',sub:'성립성',field:'의의',
+ q:'法29①本 성립성의 의의는?',
+ a:'<strong>구체성을 갖춘 발명으로 완성된 것</strong>',
+ keywords:['구체성','완성']},
+{id:'PQ05',cat:'특허요건',law:'法29①本',sub:'성립성',field:'취지',
+ q:'法29①本 성립성 규정의 취지는?',
+ a:'<strong>발명의 유용성 확인 취지</strong>',
+ keywords:['유용성','확인']},
+{id:'PQ06',cat:'특허요건',law:'法29①本',sub:'성립성',field:'요건',
+ q:'法29①本 성립성의 요건은?',
+ a:'통상의 기술자가 반복 실시하고, 목적하는 기술적 효과 달성 가능성을 <strong>예측할 수 있을 정도로 구체적, 객관적 구성</strong>을 갖출 것',
+ keywords:['통상의 기술자','반복 실시','기술적 효과','구체적','객관적']},
+{id:'PQ07',cat:'특허요건',law:'法29①本',sub:'산업상 이용가능성',field:'의의',
+ q:'산업상 이용가능성의 의의는?',
+ a:'<strong>산업에 기술적으로 이용할 수 있어야 할 것</strong>',
+ keywords:['산업','이용']},
+{id:'PQ08',cat:'특허요건',law:'法29①본',sub:'산업상 이용가능성',field:'취지',
+ q:'산업상 이용가능성의 취지는?',
+ a:'<strong>산업발전에 이바지</strong>',
+ keywords:['산업발전','이바지']},
+{id:'PQ09',cat:'특허요건',law:'法29①각호',sub:'신규성',field:'의의',
+ q:'신규성(法29①각호)의 의의는?',
+ a:'<strong>객관적으로 새로운 기술일 것</strong> (객관적 창작성)',
+ keywords:['객관적','새로운','기술','객관적 창작성']},
+{id:'PQ10',cat:'특허요건',law:'法29①각호',sub:'신규성',field:'취지',
+ q:'신규성 규정의 취지는?',
+ a:'이미 알려진 <strong>공지(公知)의 발명은 특허로서 보호할 가치가 없음</strong>',
+ keywords:['공지','보호할 가치']},
+{id:'PQ11',cat:'특허요건',law:'法29①각호',sub:'신규성',field:'요건',
+ q:'신규성 판단의 요건은?',
+ a:'① <strong>신규성 상실사유</strong> (공지 등) 해당 여부<br>② <strong>발명의 동일성</strong> 판단',
+ keywords:['신규성 상실','동일성']},
+{id:'PQ12',cat:'특허요건',law:'法29②',sub:'진보성',field:'의의',
+ q:'진보성(法29②)의 의의는?',
+ a:'<strong>보호할 가치가 있는 기술적 진보를 포함하는 발명일 것</strong> (주관적 창작성)',
+ keywords:['기술적 진보','주관적 창작성','보호할 가치']},
+{id:'PQ13',cat:'특허요건',law:'法29②',sub:'진보성',field:'취지',
+ q:'진보성 규정의 취지는?',
+ a:'<strong>비약적·누진적인 발명의 공개만을 특허로서 보호</strong>하기 위함',
+ keywords:['비약적','누진적','공개','보호']},
+{id:'PQ14',cat:'특허요건',law:'法29②',sub:'진보성',field:'요건',
+ q:'진보성 판단의 5단계 요건은?',
+ a:'① 출원발명 특정 → ② 선행발명 확정 → ③ 주선행발명 선택<br>→ ④ 공통점&차이점 확인<br>→ ⑤ <strong>통상의 기술자가 쉽게 발명할 수 있는지 (용이성)</strong> 판단',
+ keywords:['출원발명','선행발명','주선행발명','통상의 기술자','용이성']},
+{id:'PQ15',cat:'특허요건',law:'法36',sub:'선출원주의',field:'의의',
+ q:'선출원주의(法36)의 의의는?',
+ a:'<strong>동일한 발명에 대하여 최선의 출원인에게 특허를 부여</strong>함',
+ keywords:['동일한 발명','최선','출원인','특허를 부여']},
+{id:'PQ16',cat:'특허요건',law:'法36',sub:'선출원주의',field:'취지',
+ q:'선출원주의의 취지는?',
+ a:'<strong>중복특허배제 원칙 구현</strong> 및 <strong>발명의 조기공개 유도</strong>',
+ keywords:['중복특허배제','조기공개']},
+{id:'PQ17',cat:'특허요건',law:'法29③등',sub:'확대된 선출원주의',field:'의의',
+ q:'확대된 선출원주의의 의의는?',
+ a:'<strong>먼저 출원된 발명이 나중에 공개된 경우에도 특허를 받을 수 없음</strong>',
+ keywords:['먼저 출원','나중에 공개','특허를 받을 수 없']},
+{id:'PQ18',cat:'특허요건',law:'法29③등',sub:'확대된 선출원주의',field:'취지',
+ q:'확대된 선출원주의의 취지 4가지는?',
+ a:'① 선출원주의 보완<br>② 공유재산 사유화 방지<br>③ 심사청구제도의 효율성 제고<br>④ 방어출원 억제',
+ keywords:['선출원주의 보완','공유재산','사유화 방지','방어출원']},
+{id:'PQ19',cat:'특허요건',law:'法33',sub:'특허를 받을 수 있는 권리',field:'요건',
+ q:'法33 특허를 받을 수 있는 권리자는?',
+ a:'<strong>발명을 한 자</strong> 또는 <strong>그 승계인</strong>',
+ keywords:['발명을 한 자','승계인']},
+{id:'PQ20',cat:'특허요건',law:'法44',sub:'공동출원',field:'의의',
+ q:'공동출원(法44)의 의의 및 취지는?',
+ a:'의의: 특허를 받을 수 있는 권리 <strong>공유자 모두가 공동으로 특허출원</strong><br>취지: <strong>공유자 일방의 배신행위로부터 타공유자를 보호</strong>',
+ keywords:['공유자','공동으로','배신행위','보호']},
+
+// ── 명세서요건 ────────────────────────────────────────────
+{id:'MS01',cat:'명세서요건',law:'法42③ⅰ',sub:'실시가능요건',field:'의의/취지',
+ q:'실시가능요건(法42③ⅰ)의 의의와 취지는?',
+ a:'의의: 발명의 설명을 <strong>통상의 기술자가 쉽게 실시할 수 있도록 명확하고 상세하게 기재</strong><br>취지: <strong>기술문헌 & 권리해설서로서의 역할</strong> 담당',
+ keywords:['통상의 기술자','쉽게 실시','명확하고 상세하게','기술문헌','권리해설서']},
+{id:'MS02',cat:'명세서요건',law:'法42③ⅰ',sub:'실시가능요건',field:'요건',
+ q:'실시가능요건의 판단 기준은?',
+ a:'<strong>과도한 실험이나 특수한 지식의 부가 없이</strong><br>정확하게 이해하고 동시에 재현할 수 있을 것',
+ keywords:['과도한 실험','특수한 지식','이해','재현']},
+{id:'MS03',cat:'명세서요건',law:'法42④ⅰ',sub:'뒷받침 요건',field:'의의/취지',
+ q:'뒷받침 요건(法42④ⅰ)의 의의와 취지는?',
+ a:'의의: <strong>청구항이 발명의 설명에 의해 뒷받침</strong>될 것<br>취지: <strong>공개하지 아니한 발명에 대하여 특허권이 부여되는 부당한 결과를 막기 위함</strong>',
+ keywords:['청구항','발명의 설명','뒷받침','공개하지 아니한','부당한']},
+{id:'MS04',cat:'명세서요건',law:'法42④ⅱ',sub:'명확성 요건',field:'의의/취지',
+ q:'명확성 요건(法42④ⅱ)의 의의와 취지는?',
+ a:'의의: <strong>청구항을 명확하고 간결하게 기재</strong><br>취지: 명세서의 <strong>권리서로서 역할</strong> 담당',
+ keywords:['청구항','명확하고 간결하게','권리서']},
+{id:'MS05',cat:'명세서요건',law:'法42⑧',sub:'다항제',field:'의의/취지',
+ q:'다항제(法42⑧)의 의의와 취지는?',
+ a:'의의: <strong>청구범위에 청구항을 1 또는 2 이상으로 기재</strong><br>취지: ① 발명의 다면적 보호 도모 ② 권리범위 영역의 한계를 명확히 구별',
+ keywords:['청구범위','청구항','다면적 보호','권리범위','한계']},
+{id:'MS06',cat:'명세서요건',law:'法45',sub:'일특허출원범위',field:'의의/취지/요건',
+ q:'일특허출원범위(法45)의 의의·취지·요건은?',
+ a:'의의: <strong>하나의 총괄적인 발명의 개념을 형성하는 일 군(群)의 발명</strong>에 대해 하나의 특허출원<br>취지: 절차의 편의 & 관련 기술의 용이한 관리<br>요건: ⅰ)기술적 상호관련성 ⅱ)동일·상응하는 기술적 특징 ⅲ)개선된 것',
+ keywords:['총괄적','일 군','기술적 상호관련성','동일','상응하는 기술적 특징','개선']},
+
+// ── 출원이익제도 ──────────────────────────────────────────
+{id:'AP01',cat:'출원이익제도',law:'法42의2',sub:'청구범위유예',field:'의의/요건',
+ q:'청구범위유예(法42의2)의 의의와 기한은?',
+ a:'의의: 출원 당시 <strong>청구범위가 기재되지 않은 명세서</strong>를 출원서에 첨부<br>기한: 최선일로부터 <strong>1년 2월</strong> 또는 심사청구 통지받은 날로부터 <strong>3월</strong> 중 빠른 날',
+ keywords:['청구범위','기재되지 않은','1년 2월','3월','빠른 날']},
+{id:'AP02',cat:'출원이익제도',law:'法42의3',sub:'외국어특허출원',field:'의의/요건',
+ q:'외국어특허출원(法42의3)의 의의와 절차는?',
+ a:'의의: 출원 당시 <strong>국어가 아닌 언어로 기재한 명세서 및 도면</strong>을 출원서에 첨부<br>절차: 최선일로부터 <strong>1년 2월</strong> 또는 심사청구 통지일로부터 <strong>3월</strong> 중 빠른 날까지 <strong>국어번역문 제출</strong>',
+ keywords:['국어가 아닌','1년 2월','3월','국어번역문']},
+{id:'AP03',cat:'출원이익제도',law:'法30',sub:'공지예외주장',field:'의의/취지/요건',
+ q:'공지예외주장(法30)의 의의·취지·요건은?',
+ a:'의의: 특허를 받을 수 있는 권리를 가진 자의 발명이 <strong>공지되지 않은 것으로 간주</strong><br>취지: <strong>출원인의 권리를 실효적으로 보호</strong><br>요건: ①의사에 기한 자기공지+12월 이내 출원+증명서류 ②의사에 반한 공지+12월 이내 출원',
+ keywords:['공지되지 않은','간주','출원인','실효적으로 보호','자기공지','12월']},
+{id:'AP04',cat:'출원이익제도',law:'法34,35',sub:'정당한 권리자 출원',field:'의의/취지/요건',
+ q:'정당한 권리자 출원(法34,35)의 의의·취지·요건은?',
+ a:'의의: 정당한 권리자의 출원에 대해 <strong>출원일을 무권리자 출원일로 소급</strong><br>취지: 선출원주의 보완 & 정당한 권리자 보호<br>요건: 무권리자 출원이 거절결정 확정 등 후 확정일로부터 <strong>30일 이내</strong> 출원 등',
+ keywords:['소급','정당한 권리자','30일','무권리자','선출원주의 보완']},
+{id:'AP05',cat:'출원이익제도',law:'法99의2',sub:'특허권 이전청구',field:'의의/취지/효과',
+ q:'특허권 이전청구(法99의2)의 의의·취지·효과는?',
+ a:'의의: 정당한 권리자가 <strong>법원의 판결을 통해 무권리자 명의의 특허권 이전을 청구</strong><br>취지: 정당한 권리자를 두텁게 보호<br>효과: 무권리자의 특허권은 <strong>설정등록된 날부터 정당한 권리자에게 있는 것으로 봄</strong>',
+ keywords:['법원','판결','이전','설정등록된 날','정당한 권리자']},
+{id:'AP06',cat:'출원이익제도',law:'法47',sub:'실체보정',field:'의의/취지/요건',
+ q:'실체보정(法47)의 의의·취지·범위 요건은?',
+ a:'의의: 특허출원인이 <strong>설정등록이 되기 전에 명세서 또는 도면의 내용을 보충·정정</strong><br>취지: 선출원주의하에서 출원인을 보호<br>범위: <strong>신규사항추가금지</strong>',
+ keywords:['설정등록','명세서','도면','보충','정정','신규사항추가금지']},
+{id:'AP07',cat:'출원이익제도',law:'法51',sub:'보정각하',field:'의의/취지/효과',
+ q:'보정각하(法51)의 의의·취지·효과는?',
+ a:'의의: 일정 요건을 위반한 보정을 <strong>결정으로 각하하는 행정처분</strong><br>취지: <strong>심사절차의 지연 방지</strong><br>효과: 당해 보정은 <strong>없던 것으로 봄</strong> → 보정 전 명세서 기준',
+ keywords:['결정','각하','심사절차','지연 방지','없던 것']},
+{id:'AP08',cat:'출원이익제도',law:'法52',sub:'분할출원',field:'의의/취지/요건',
+ q:'분할출원(法52)의 의의·취지·요건·효과는?',
+ a:'의의: 특허출원의 일부를 <strong>하나 이상의 새로운 특허출원으로 분할</strong><br>취지: 출원일체 원칙 위반 해소 & 최적의 보호<br>시기: 거절결정등본 송달받은 날로부터 <strong>3개월 이내</strong> 등<br>효과: 출원일이 <strong>원출원일로 소급</strong>',
+ keywords:['분할','3개월','원출원일','소급']},
+{id:'AP09',cat:'출원이익제도',law:'法52의2',sub:'분리출원',field:'의의/취지/요건',
+ q:'분리출원(法52의2)의 의의·취지·요건은?',
+ a:'의의: 심판청구가 기각된 특허출원의 <strong>등록가능한 일부 청구항을 새로운 특허출원으로 분리</strong><br>취지: 심판단계 이후에 권리구제 기회 부여<br>기간: 기각심결 등본을 송달받은 날로부터 <strong>30일 내</strong>',
+ keywords:['기각','등록가능한','청구항','30일','권리구제']},
+{id:'AP10',cat:'출원이익제도',law:'法53',sub:'변경출원',field:'의의/효과',
+ q:'변경출원(法53)의 의의와 효과는?',
+ a:'의의: 출원의 내용의 동일성을 유지시킨 채 <strong>그 형식만을 변경</strong><br>효과: ① 출원일이 <strong>원출원일로 소급</strong> ② <strong>원출원은 취하된 것으로 봄</strong>',
+ keywords:['동일성','형식','원출원일','소급','취하']},
+{id:'AP11',cat:'출원이익제도',law:'法54',sub:'조약우선권주장',field:'의의/취지/요건',
+ q:'조약우선권주장(法54)의 의의·취지·주요 요건은?',
+ a:'의의: 조약당사국 출원을 기초로 우선권을 주장한 발명에 대해 <strong>소정의 판단시점 소급</strong><br>취지: 각국에서의 절차상 제약 극복 & 진정한 선출원 지위에 대한 국제적 보호<br>서류: 최우선일로부터 <strong>1년 4개월 내</strong> 증명서류 제출',
+ keywords:['조약당사국','소급','1년 4개월','국제적 보호']},
+{id:'AP12',cat:'출원이익제도',law:'法55',sub:'국내우선권주장',field:'의의/취지/요건',
+ q:'국내우선권주장(法55)의 의의·취지·기간은?',
+ a:'의의: 국내 선출원을 기초로 우선권을 주장한 발명에 대해 <strong>소정의 판단시점 소급</strong><br>취지: 발명자의 누적된 성과 보호 & 내·외국인간 형평성 보장<br>기간: <strong>선출원일로부터 1년 이내</strong>',
+ keywords:['국내 선출원','소급','형평성','1년 이내']},
+{id:'AP13',cat:'출원이익제도',law:'法65',sub:'보상금청구권',field:'의의/취지/요건',
+ q:'보상금청구권(法65)의 의의·취지·발생요건은?',
+ a:'의의: 특허출원인이 출원발명을 <strong>무단으로 업으로서 실시하는 자에게 보상금 지급 청구</strong><br>취지: 공개된 발명에 대한 제3자의 모방·도용으로부터 출원인 보호<br>요건: 출원공개 후 서면경고 또는 알면서 업으로서 실시<br>행사: <strong>특허권 설정등록 후</strong>에 행사',
+ keywords:['무단','업으로서','보상금','서면경고','설정등록 후']},
+{id:'AP14',cat:'출원이익제도',law:'法66의2,66의3',sub:'직권보정/직권재심사',field:'의의/취지',
+ q:'직권보정(法66의2)과 직권재심사(法66의3)의 의의와 취지는?',
+ a:'직권보정: 심사관이 <strong>특허결정을 할 때 명세서 등에 적힌 사항을 직권으로 보정</strong> / 취지: 심사지연 방지 & 출원인 편의<br>직권재심사: 심사관이 <strong>특허결정을 취소하고 다시 심사</strong> / 취지: <strong>부실특허 양산 방지</strong>',
+ keywords:['특허결정','직권','보정','부실특허','취소','재심사']},
+{id:'AP15',cat:'출원이익제도',law:'法67의2',sub:'재심사청구',field:'의의/취지',
+ q:'재심사청구(法67의2)의 의의와 취지는?',
+ a:'의의: 특허여부 결정을 받은 출원인이 <strong>보정을 수반하여 심사관의 재심사를 청구</strong><br>취지: 심사 종결 이후 보정의 기회 부여 & <strong>조속한 권리화 도모</strong>',
+ keywords:['보정을 수반','재심사','조속한 권리화']},
+
+// ── 특허권·실시권 ────────────────────────────────────────
+{id:'PR01',cat:'특허권실시권',law:'法89',sub:'존속기간 연장',field:'의의/취지/요건',
+ q:'허가 등에 따른 존속기간 연장(法89)의 의의·취지·등록요건은?',
+ a:'의의: 다른 법령의 허가 등으로 <strong>장기간이 소요되는 발명에 대한 특허권의 존속기간 연장</strong><br>취지: 타 특허권자와의 형평성 & 의약품 발명의 보호·장려<br>요건: 연장기간이 실시할 수 없었던 기간을 초과하지 않을 것 / 하나의 허가에 하나의 특허권 등',
+ keywords:['장기간','존속기간','형평성','의약품','초과하지 않']},
+{id:'PR02',cat:'특허권실시권',law:'法100',sub:'전용실시권',field:'의의/발생/효력',
+ q:'전용실시권(法100)의 의의·발생·효력은?',
+ a:'의의: 제3자가 <strong>업으로서 특허발명을 독점적으로 실시할 수 있는 권리</strong><br>발생: <strong>계약 + 설정등록</strong><br>효력: 설정행위로 정한 범위 내에서 <strong>독점배타적 효력</strong>',
+ keywords:['업으로서','독점','계약','설정등록','독점배타적']},
+{id:'PR03',cat:'특허권실시권',law:'法102',sub:'허락에 의한 통상실시권',field:'의의/발생/효력',
+ q:'허락에 의한 통상실시권(法102)의 의의·발생·효력은?',
+ a:'의의: <strong>허락을 성립 원인으로 하여 발생하는 통상실시권</strong><br>발생: <strong>계약</strong> (설정등록은 제3자 대항요건에 불과)<br>효력: 설정행위로 정한 범위 내에서 실시 (<strong>배타적 효력 無</strong>)',
+ keywords:['허락','계약','대항요건','배타적 효력 無']},
+{id:'PR04',cat:'특허권실시권',law:'法103',sub:'선사용권',field:'의의/취지/요건/내용',
+ q:'선사용권(法103)의 의의·취지·요건·특징은?',
+ a:'의의: <strong>선발명에 의한 사업자에게 인정되는 법정 통상실시권</strong><br>취지: 선출원주의 하에서 선발명자와 선출원인 간의 공평 도모 & 기존 산업설비 보호<br>요건: 특허출원시 / 선의 / 국내에서 / 실시사업 또는 사업준비<br>특징: 등록 없이도 대항 / <strong>무상</strong>',
+ keywords:['선발명','법정','공평','산업설비','선의','무상','대항']},
+{id:'PR05',cat:'특허권실시권',law:'法104',sub:'중용권',field:'의의/취지/내용',
+ q:'중용권(法104)의 의의·취지·특징은? (선사용권과의 차이 포함)',
+ a:'의의: 저촉관계에 있어 무효로 된 특허발명의 권리자에게 인정되는 <strong>법정 통상실시권</strong><br>취지: 행정처분을 신뢰한 자의 이익 및 기존 산업설비 보호<br>특징: 등록 없이도 대항 / <strong>유상</strong> (← 선사용권과 달리 유상)',
+ keywords:['저촉','무효','행정처분','법정','유상','대항']},
+{id:'PR06',cat:'특허권실시권',law:'法107',sub:'재정실시권',field:'의의/취지/재정사유',
+ q:'재정실시권(法107)의 의의·취지·재정사유 5가지는?',
+ a:'의의: <strong>재정 사유에 해당하는 경우에 행정처분으로 발생시키는 통상실시권</strong><br>취지: 특허발명의 실시를 간접적 유도 & <strong>특허권의 권리남용 방지</strong><br>사유: ⅰ)불실시 ⅱ)불충분 실시 ⅲ)공익을 위해 특히 필요 ⅳ)불공정거래행위 시정 ⅴ)수입국에 의약품 수출',
+ keywords:['행정처분','권리남용 방지','불실시','불충분 실시','공익','불공정거래','의약품']},
+
+// ── 특허침해·구제 ──────────────────────────────────────
+{id:'IN01',cat:'특허침해구제',law:'균등론',sub:'균등론',field:'의의/취지/요건',
+ q:'균등론의 의의·취지·요건은?',
+ a:'의의: <strong>등가 관계에 있는 기술도 특허발명의 보호범위에 포함</strong>시키는 이론<br>취지: <strong>주변한정주의 하에서 특허발명의 실질적 가치 보호</strong><br>요건: ⅰ)과제해결원리 동일 ⅱ)실질적으로 동일한 작용효과 ⅲ)통상의 기술자가 용이하게 생각해낼 수 있을 정도 ⅳ)\'특별한 사정\'이 없을 것',
+ keywords:['등가','보호범위','주변한정주의','과제해결원리','작용효과','용이하게','특별한 사정']},
+{id:'IN02',cat:'특허침해구제',law:'法127',sub:'간접침해',field:'의의/취지/요건',
+ q:'간접침해(法127)의 의의·취지·요건은?',
+ a:'의의: <strong>침해의 개연성이 명백히 높은 행위에 대해 침해로 의제</strong><br>취지: 특허권이 부당하게 확장되지 않는 범위 내에서 <strong>권리구제의 실효성 도모</strong><br>요건: [대상] 특허발명의 생산·실시에만 사용되는 물건 (<strong>전용품</strong>) / [행위] 생산 등 (사용 제외)',
+ keywords:['개연성','침해로 의제','권리구제','전용품','사용 제외']},
+{id:'IN03',cat:'특허침해구제',law:'비침해항변',sub:'비침해 항변',field:'의의',
+ q:'특허침해소송에서 비침해 항변 4가지는?',
+ a:'① <strong>무효의 항변</strong>: 무효사유 존재 시 권리범위 인정 불가<br>② <strong>권리남용 항변</strong>: 무효사유 명백한 특허권 기초 행사는 권리남용으로 제한<br>③ <strong>자유실시기술 항변</strong>: 실시발명이 자유실시기술에 해당 시 보호범위 불속<br>④ <strong>의식적 제외 항변</strong>: 출원인의 의식적 제외 부분은 보호범위에서 배제',
+ keywords:['무효의 항변','권리남용 항변','자유실시기술','의식적 제외']},
+{id:'IN04',cat:'특허침해구제',law:'권리소진이론',sub:'권리소진이론',field:'의의/취지/요건',
+ q:'권리소진이론의 의의·취지·요건은?',
+ a:'의의: <strong>특허권 목적이 달성된 제품에는 그 효력이 소진된 것으로 침해를 주장할 수 없다는 이론</strong><br>취지: 자유로운 유통과 거래안전 보호 & 특허권자의 이중이득 방지<br>요건: 특허권자 또는 실시자에 의한 / 국내에서 / 적법한 판매 / 특허발명을 실질적으로 구현한 제품',
+ keywords:['소진','이중이득','국내','적법한 판매','실질적으로 구현']},
+{id:'IN05',cat:'특허침해구제',law:'法128',sub:'손해액 산정',field:'의의',
+ q:'法128 손해액 산정의 4가지 방식은?',
+ a:'②항: 침해자의 양도수량 기준 <strong>일실이익</strong> + 초과분 합리적 실시료<br>④항: 침해자의 <strong>이익액을 손해액으로 추정</strong><br>⑤항: <strong>합리적으로 받을 수 있는 금액을 하한</strong>으로 함<br>⑦항: 입증 곤란 시 법원이 <strong>상당한 손해액을 인정</strong><br>⑧항: 고의 침해 시 <strong>최대 5배 증액배상</strong>',
+ keywords:['일실이익','이익액','추정','하한','상당한 손해액','5배','증액']},
+{id:'IN06',cat:'특허침해구제',law:'法98',sub:'이용관계',field:'의의/요건',
+ q:'이용관계(法98)의 의의와 요건은?',
+ a:'의의: <strong>후원 특허발명이 선원 특허발명을 이용하는 일방적 충돌관계</strong><br>요건: ① \'타인\'의 \'선출원에 의한 등록\'된 특허발명을 ② 후원 특허발명이 \'이용\'하는 것',
+ keywords:['후원','선원','이용','일방적','타인','선출원','등록']},
+
+// ── 특유쟁점 ──────────────────────────────────────────
+{id:'SP01',cat:'특유쟁점',law:'의약용도발명',sub:'특수유형발명',field:'의의',
+ q:'의약용도발명·선택발명·수치한정발명·파라미터발명의 의의를 각각 기술하시오.',
+ a:'의약용도발명: 물질이 가지는 속성의 발견에 기초하여 <strong>의약으로서의 새로운 용도를 제공하는 발명</strong><br>선택발명: <strong>선행발명의 상위개념에 포함되는 하위개념을 구성요소</strong>로 하는 발명<br>수치한정발명: <strong>청구항의 발명의 구성이 수량적 범위를 포함</strong>하는 발명<br>파라미터발명: 새롭게 창출한 <strong>특성값 또는 복수 변수 사이의 상관관계를 이용하여 구성요소를 특정</strong>한 발명',
+ keywords:['의약','새로운 용도','상위개념','하위개념','수량적 범위','특성값','상관관계']},
+{id:'SP02',cat:'특유쟁점',law:'PBP청구항',sub:'특수 청구항',field:'의의',
+ q:'PBP청구항·기능식청구항·젭슨청구항·마쿠쉬청구항의 의의를 각각 기술하시오.',
+ a:'PBP청구항: <strong>물건발명을 물(物)의 구성이 아닌 방법에 의해 특정한 청구항</strong><br>기능식청구항: <strong>기능적 표현을 포함하는 청구항</strong><br>젭슨청구항: <strong>전제부에 특정기술을 인용한 후 개량·추가된 구성요소를 특징부에 적는 기재형식</strong><br>마쿠쉬청구항: <strong>2 이상의 구성요소를 택일적으로 하나의 청구항에 적는 기재형식</strong>',
+ keywords:['방법에 의해 특정','기능적 표현','전제부','특징부','택일적']},
+
+// ── 심판·소송 ──────────────────────────────────────────
+{id:'TR01',cat:'심판소송',law:'法163',sub:'일사부재리',field:'의의/취지/요건',
+ q:'일사부재리(法163)의 의의·취지·요건은?',
+ a:'의의: 심결이 확정된 사건에 관하여 누구든지 <strong>동일사실·증거에 의해 다시 심판을 청구할 수 없음</strong><br>취지: 모순·저촉되는 복수의 심결 발생 방지 & 심판 절차의 경제성 도모<br>요건: 확정된 본안심결 / 누구든지 / <strong>동일사실</strong> / <strong>동일증거</strong> / 동일심판',
+ keywords:['확정','동일사실','동일증거','심판','모순','경제성']},
+{id:'TR02',cat:'심판소송',law:'法132의2',sub:'특허취소신청',field:'의의/취지/요건',
+ q:'특허취소신청(法132의2)의 의의·취지·신청요건은?',
+ a:'의의: 특허 부여 후 일정기간 동안 <strong>하자 있는 특허의 취소를 구하는 제도</strong><br>취지: 공중의 심사참여 확대 & <strong>부실특허 예방</strong><br>신청인: 누구든지 / 기간: 설정등록일로부터 <strong>등록공고 후 6개월이 되는 날까지</strong>',
+ keywords:['하자','취소','부실특허','공중','6개월','누구든지']},
+{id:'TR03',cat:'심판소송',law:'法133',sub:'특허무효심판',field:'의의/취지/요건',
+ q:'특허무효심판(法133)의 의의·취지·청구요건은?',
+ a:'의의: <strong>법정된 무효사유를 청구이유로 하여 특허의 무효를 구하는 심판</strong><br>취지: 심사의 완전성 사후적 보장 & 당사자 간의 특허분쟁 해결수단<br>청구인: <strong>이해관계인 또는 심사관</strong> → 특허권자 / 시기: 특허권 소멸 후에도 가능',
+ keywords:['법정된 무효사유','이해관계인','심사관','소멸 후','사후적']},
+{id:'TR04',cat:'심판소송',law:'法135',sub:'권리범위확인심판',field:'의의/취지/요건',
+ q:'권리범위확인심판(法135)의 의의·취지·청구요건은?',
+ a:'의의: 확인대상발명이 특허발명의 권리범위에 속하는지에 대한 <strong>공적인 확인을 구하는 심판</strong><br>취지: 당사자 분쟁을 사전 예방 or 조기해결 & 침해소송에서 법원의 판단기준 제공<br>요건: 특허발명 vs 확인대상발명 / 청구항마다 可 / 적법한 특정 & 확인의 이익 要 / 특허권 존속 중',
+ keywords:['공적인 확인','확인대상발명','침해소송','판단기준','확인의 이익','존속 중']},
+{id:'TR05',cat:'심판소송',law:'法136',sub:'정정심판',field:'의의/취지/요건',
+ q:'정정심판(法136)의 의의·취지·청구요건은?',
+ a:'의의: <strong>특허발명의 명세서에 대하여 정정을 구하는 심판</strong><br>취지: 특허분쟁을 미연에 방지 & 특허권자 보호 (단, 제3자의 이익을 위해 제한적 범위에서만 정정 인정)<br>청구인: <strong>특허권자</strong> / 시기: 특허권 소멸 후에도 가능 (무효심결로 소급 소멸한 경우 제외)',
+ keywords:['명세서','정정','특허권자','제한적','소멸 후']},
+{id:'TR06',cat:'심판소송',law:'法186',sub:'심결취소소송',field:'의의/당사자적격/심리범위',
+ q:'심결취소소송(法186)의 당사자적격·제소기간·심리범위 원칙은?',
+ a:'원고적격: <strong>당사자, 참가인, 참가신청이 거부된 자</strong><br>피고적격: 결정계→<strong>지식재산처장</strong> / 당사자계→<strong>심결에서의 상대방</strong><br>제소기간: 등본 송달일로부터 <strong>30일 내</strong> (불변기간)<br>심리범위: <strong>무제한설 원칙</strong>',
+ keywords:['당사자','참가인','지식재산처장','30일','불변기간','무제한설']},
+{id:'TR07',cat:'심판소송',law:'法189③',sub:'기속력',field:'의의/취지/내용',
+ q:'기속력(法189③)의 의의·취지·내용은?',
+ a:'의의: 심결취소 판결확정시 <strong>특허심판원이 동일한 내용의 심결 처분 반복을 금지하는 효력</strong><br>취지: 특허법원 판결의 실효성 도모<br>내용: <strong>취소의 기본이 된 이유</strong>에 기속됨',
+ keywords:['심결취소','판결','반복','금지','실효성','취소의 기본이 된 이유']},
+
+// ── PCT ──────────────────────────────────────────────
+{id:'PCT01',cat:'PCT제도',law:'PCT',sub:'국제출원',field:'의의/절차',
+ q:'PCT 국제출원의 의의와 국제조사·국제예비심사의 차이는?',
+ a:'의의: <strong>특허협력조약이 정하는 규정에 따라 제출되는 출원</strong> → 국제출원일에 지정국에서 출원한 것과 동일한 효과<br>국제조사: <strong>모든 국제출원에 관한 필수적 절차</strong> / 선행기술 확인 / 구속력 없는 예비 견해<br>국제예비심사: <strong>청구한 출원에 관한 임의적 절차</strong> / 산업상 이용가능성·신규성·진보성에 대한 예비 견해',
+ keywords:['특허협력조약','지정국','동일한 효과','필수적','임의적','구속력 없는','예비']},
+{id:'PCT02',cat:'PCT제도',law:'法194,196',sub:'국제출원 인정/취하간주',field:'요건',
+ q:'PCT 국제출원 인정요건 6가지와 취하간주 사유 3가지는?',
+ a:'인정요건: ⅰ)출원인 성명 기재 ⅱ)인정하는 언어 ⅲ)주체적 요건 ⅳ)발명의 설명 및 청구범위 기재 ⅴ)국제출원의 표시 ⅵ)체약국의 지정<br>취하간주: ⅰ)보정명령 기간 내 보정 안 한 경우 ⅱ)수수료 미납 ⅲ)요건의 흠이 국제출원일로부터 <strong>4개월 내</strong> 발견된 경우',
+ keywords:['출원인 성명','언어','청구범위','지정','보정명령','수수료','4개월']},
+];
+
+// ═══════════════════════════════════════════════════════════
+//  DB — DUAL TRACK SPACED REPETITION
+// ═══════════════════════════════════════════════════════════
+const SK = 'patentLaw_v3';
+let db = {};
+
+function loadDB() {
+  try { db = JSON.parse(localStorage.getItem(SK)) || {}; } catch(e) { db = {}; }
+  CARDS.forEach(c => {
+    if (!db[c.id]) db[c.id] = {
+      // Flashcard track (SM-2)
+      fcInterval:0, fcReps:0, fcEF:2.5, fcNextDue:0,
+      // Subjective track
+      subCorrect:0, subAttempts:0, subNextDue:0, subInterval:0
+    };
+    // migration
+    const s = db[c.id];
+    if (s.fcInterval === undefined) { s.fcInterval=s.interval||0; s.fcReps=s.repetitions||0; s.fcEF=s.ef||2.5; s.fcNextDue=s.nextDue||0; }
+    if (s.subCorrect === undefined) { s.subCorrect=0; s.subAttempts=0; s.subNextDue=0; s.subInterval=0; }
+  });
+}
+function saveDB() {
+  localStorage.setItem(SK, JSON.stringify(db));
+  const histKey='patentHist_v2';
+  let h={};try{h=JSON.parse(localStorage.getItem(histKey))||{};}catch(e){}
+  h[todayStr()]=(h[todayStr()]||0)+1;
+  localStorage.setItem(histKey,JSON.stringify(h));
+}
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function isFCDue(id){const s=db[id];return !s||s.fcNextDue<=Date.now();}
+function isSubDue(id){const s=db[id];return !s||s.subNextDue<=Date.now();}
+function isMastered(id){const s=db[id];return s&&s.fcInterval>=21&&s.subCorrect>=3;}
+
+// SM-2 for flashcard
+function sm2(s, rating) {
+  let {fcInterval:iv, fcReps:reps, fcEF:ef} = s;
+  if(rating===0){reps=0;iv=0;}
+  else if(rating===1){ef=Math.max(1.3,ef-.15);iv=Math.max(1,Math.round(iv*1.2));if(reps===0)iv=1;}
+  else if(rating===2){if(reps===0)iv=1;else if(reps===1)iv=3;else iv=Math.round(iv*ef);reps++;}
+  else{ef=Math.min(3.5,ef+.1);if(reps===0)iv=3;else if(reps===1)iv=5;else iv=Math.round(iv*ef*1.3);reps++;}
+  const now=Date.now();
+  return {...s, fcInterval:iv, fcReps:reps, fcEF:ef, fcNextDue:iv===0?now:now+iv*86400000};
+}
+
+// SM-2 for subjective (simpler)
+function updateSubjective(s, isCorrect) {
+  let {subCorrect:sc, subAttempts:sa, subInterval:si} = s;
+  sa++;
+  if(isCorrect){
+    sc++;
+    si=si===0?1:si===1?3:si===3?7:si===7?14:21;
+  } else {
+    si=Math.max(0,Math.round(si*0.5));
+  }
+  const now=Date.now();
+  return {...s, subCorrect:sc, subAttempts:sa, subInterval:si, subNextDue:si===0?now:now+si*86400000};
+}
+
+function getNextFCIntervals(s){
+  return[0,1,2,3].map(r=>{const ns=sm2({...s},r);return ns.fcInterval;});
+}
+function daysStr(d){return d<=0?'오늘':d===1?'1일 후':`${d}일 후`;}
+
+// ═══════════════════════════════════════════════════════════
+//  KEYWORD GRADING
+// ═══════════════════════════════════════════════════════════
+function extractKeywords(text) {
+  // Strip HTML
+  const tmp = document.createElement('div');
+  tmp.innerHTML = text;
+  return tmp.textContent||tmp.innerText||text;
+}
+
+function gradeAnswer(userText, keywords, correctAnswer) {
+  const user = normalize(userText);
+  const correct = normalize(extractKeywords(correctAnswer));
+
+  if(!userText.trim()) return {score:0, matched:[], missed:keywords};
+
+  const matched=[], missed=[];
+  keywords.forEach(kw => {
+    const normKw = normalize(kw);
+    if(user.includes(normKw)) matched.push(kw);
+    else missed.push(kw);
+  });
+
+  // also check overall similarity with full correct text (bonus)
+  const overlapBonus = computeOverlap(user, correct);
+  const kwScore = keywords.length > 0 ? matched.length/keywords.length : 0;
+  const score = Math.min(100, Math.round((kwScore*0.8 + overlapBonus*0.2)*100));
+
+  return {score, matched, missed};
+}
+
+function normalize(s) {
+  return s.toLowerCase()
+    .replace(/\s+/g,' ')
+    .replace(/[①②③④⑤ⅰⅱⅲⅳⅴ\.\,\!\?「」『』\[\]\(\)\&\·]/g,' ')
+    .trim();
+}
+
+function computeOverlap(a, b) {
+  const wa = new Set(a.split(/\s+/).filter(w=>w.length>1));
+  const wb = new Set(b.split(/\s+/).filter(w=>w.length>1));
+  if(wa.size===0||wb.size===0) return 0;
+  let common=0;
+  wa.forEach(w=>{ if(wb.has(w)) common++; });
+  return common/Math.max(wa.size,wb.size);
+}
+
+function getGradeInfo(score) {
+  if(score>=85) return {cls:'gc-perfect', label:'⭐ 완벽!', msg:'핵심 키워드를 모두 작성하셨습니다.'};
+  if(score>=65) return {cls:'gc-good', label:'✅ 양호', msg:'대부분의 내용을 기억하셨습니다.'};
+  if(score>=40) return {cls:'gc-partial', label:'📝 부분 정답', msg:'일부 핵심어를 놓쳤습니다.'};
+  return {cls:'gc-fail', label:'❌ 미흡', msg:'다시 확인하고 연습하세요.'};
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════════════════
+let selectedCats=new Set(), currentDeck=[], currentIdx=0, currentMode='';
+let sessionStats={correct:0,wrong:0,newCards:0,masteryGained:0};
+let isFlipped=false, quizAnswered=false, subGraded=false;
+const CATS=[...new Set(CARDS.map(c=>c.cat))];
+
+// ═══════════════════════════════════════════════════════════
+//  SCREENS
+// ═══════════════════════════════════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='screen-home') updateHome();
+  if(id==='screen-progress') renderProgress('all');
+}
+function goHome(){showScreen('screen-home');}
+
+// ═══════════════════════════════════════════════════════════
+//  HOME
+// ═══════════════════════════════════════════════════════════
+function updateHome(){
+  loadDB();
+  const total=CARDS.length;
+  const fcDue=CARDS.filter(c=>isFCDue(c.id)).length;
+  const subDue=CARDS.filter(c=>isSubDue(c.id)).length;
+  const fcLearned=CARDS.filter(c=>db[c.id]&&db[c.id].fcReps>0).length;
+  const mastered=CARDS.filter(c=>isMastered(c.id)).length;
+  document.getElementById('stat-total').textContent=total;
+  document.getElementById('stat-due').textContent=fcDue;
+  document.getElementById('stat-sub-due').textContent=subDue;
+  document.getElementById('stat-learned').textContent=fcLearned;
+  document.getElementById('stat-mastered').textContent=mastered;
+  const streak=calcStreak();
+  const sa=document.getElementById('streak-area');
+  if(streak>0){sa.style.display='inline-flex';document.getElementById('streak-num').textContent=streak;}
+  renderCategories();
+}
+
+function calcStreak(){
+  let hist={};try{hist=JSON.parse(localStorage.getItem('patentHist_v2'))||{};}catch(e){}
+  let s=0;const d=new Date();
+  while(true){const k=d.toISOString().slice(0,10);if(hist[k]){s++;d.setDate(d.getDate()-1);}else break;}
+  return s;
+}
+
+function renderCategories(){
+  const grid=document.getElementById('category-grid');
+  grid.innerHTML='';
+  CATS.forEach(cat=>{
+    const cards=CARDS.filter(c=>c.cat===cat);
+    const total=cards.length;
+    const fcDone=cards.filter(c=>db[c.id]&&db[c.id].fcInterval>=7).length;
+    const subDone=cards.filter(c=>db[c.id]&&db[c.id].subCorrect>=1).length;
+    const mastered=cards.filter(c=>isMastered(c.id)).length;
+    const fcDue=cards.filter(c=>isFCDue(c.id)).length;
+    const fcPct=Math.round(fcDone/total*100);
+    const subPct=Math.round(subDone/total*100);
+    const btn=document.createElement('div');
+    btn.className='cat-btn'+(selectedCats.has(cat)?' selected':'');
+    btn.innerHTML=`<span class="cat-name">${cat}</span>
+<div class="cat-meta">${total}개 · ⭐${mastered}${fcDue>0?` <span class="due-badge">${fcDue}</span>`:''}</div>
+<div class="cat-tracks">
+<div class="cat-track-bar"><div class="cat-track-fill-fc" style="width:${fcPct}%" title="FC ${fcPct}%"></div></div>
+<div class="cat-track-bar"><div class="cat-track-fill-sub" style="width:${subPct}%" title="주관식 ${subPct}%"></div></div>
+</div>`;
+    btn.onclick=()=>toggleCat(cat,btn);
+    grid.appendChild(btn);
+  });
+}
+
+function toggleCat(cat,btn){
+  if(selectedCats.has(cat)){selectedCats.delete(cat);btn.classList.remove('selected');}
+  else{selectedCats.add(cat);btn.classList.add('selected');}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODE SELECTION
+// ═══════════════════════════════════════════════════════════
+function getFilteredCards(){
+  return selectedCats.size===0?[...CARDS]:CARDS.filter(c=>selectedCats.has(c.cat));
+}
+
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function startMode(mode){
+  loadDB();
+  currentMode=mode;
+  sessionStats={correct:0,wrong:0,newCards:0,masteryGained:0};
+  const base=getFilteredCards();
+
+  if(mode==='flashcard'){
+    const due=base.filter(c=>isFCDue(c.id));
+    const notDue=base.filter(c=>!isFCDue(c.id));
+    due.sort((a,b)=>db[a.id].fcNextDue-db[b.id].fcNextDue);
+    currentDeck=[...due,...notDue];
+  } else if(mode==='review'){
+    currentDeck=shuffle(base.filter(c=>isFCDue(c.id)));
+    if(currentDeck.length===0){showToast('오늘 복습할 플래시카드가 없습니다! 🎉');return;}
+  } else if(mode==='subjective'){
+    const due=base.filter(c=>isSubDue(c.id));
+    const notDue=base.filter(c=>!isSubDue(c.id));
+    currentDeck=[...shuffle(due),...shuffle(notDue)];
+  } else if(mode==='sub-review'){
+    currentDeck=shuffle(base.filter(c=>isSubDue(c.id)));
+    if(currentDeck.length===0){showToast('오늘 주관식 복습 카드가 없습니다! 🎉');return;}
+  } else if(mode==='quiz'){
+    currentDeck=shuffle(base);
+  }
+
+  currentIdx=0;
+  if(mode==='flashcard'||mode==='review') loadFlashcard();
+  else if(mode==='subjective'||mode==='sub-review') loadSubjective();
+  else if(mode==='quiz') loadQuiz();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FLASHCARD
+// ═══════════════════════════════════════════════════════════
+function loadFlashcard(){
+  if(currentIdx>=currentDeck.length){showResult();return;}
+  showScreen('screen-flashcard');
+  isFlipped=false;
+  document.getElementById('card-3d').classList.remove('flipped');
+  document.getElementById('rating-area').classList.remove('visible');
+  const card=currentDeck[currentIdx];
+  const s=db[card.id];
+  document.getElementById('fc-cat-badge').textContent=card.cat;
+  document.getElementById('fc-law-badge').textContent=`${card.law} · ${card.sub}`;
+  document.getElementById('fc-question').textContent=card.q;
+  document.getElementById('fc-field-label').textContent=`▸ ${card.field}`;
+  document.getElementById('fc-answer').innerHTML=card.a;
+  document.getElementById('fc-mode-label').textContent=currentMode==='review'?'REVIEW':'FLASH';
+  const ivs=getNextFCIntervals(s);
+  ['r0-days','r1-days','r2-days','r3-days'].forEach((id,i)=>{
+    document.getElementById(id).textContent=daysStr(ivs[i]);
+  });
+  updateFCProgress();
+}
+
+function flipCard(){
+  if(isFlipped)return;
+  isFlipped=true;
+  document.getElementById('card-3d').classList.add('flipped');
+  document.getElementById('rating-area').classList.add('visible');
+  if(db[currentDeck[currentIdx].id].fcReps===0) sessionStats.newCards++;
+}
+
+function rateCard(rating){
+  const card=currentDeck[currentIdx];
+  const wasM=isMastered(card.id);
+  db[card.id]=sm2({...db[card.id]},rating);
+  saveDB();
+  if(rating>=2) sessionStats.correct++;
+  else{sessionStats.wrong++;currentDeck.push(card);}
+  if(!wasM&&isMastered(card.id)) sessionStats.masteryGained++;
+  currentIdx++;
+  setTimeout(loadFlashcard,180);
+}
+
+function skipCard(){currentIdx++;loadFlashcard();}
+
+function updateFCProgress(){
+  const tot=currentDeck.length,pct=tot>0?Math.round(currentIdx/tot*100):0;
+  document.getElementById('fc-prog-fill').style.width=pct+'%';
+  document.getElementById('fc-counter').textContent=`${currentIdx} / ${tot}`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SUBJECTIVE
+// ═══════════════════════════════════════════════════════════
+function loadSubjective(){
+  if(currentIdx>=currentDeck.length){showResult();return;}
+  showScreen('screen-subjective');
+  subGraded=false;
+  const card=currentDeck[currentIdx];
+  document.getElementById('sub-law-badge').textContent=`${card.law} · ${card.sub}`;
+  document.getElementById('sub-field-tag').textContent=card.field.toUpperCase();
+  document.getElementById('sub-question').textContent=card.q;
+  document.getElementById('grade-result-area').innerHTML='';
+  document.getElementById('sub-submit-row').style.display='flex';
+  document.getElementById('sub-next-row').style.display='none';
+
+  // Build input area
+  const container=document.getElementById('sub-blanks-container');
+  container.innerHTML='';
+
+  // Single textarea for full answer
+  const wrap=document.createElement('div');
+  wrap.style.marginBottom='12px';
+  const hintRow=document.createElement('div');
+  hintRow.className='sub-hint-row';
+
+  const sub=db[card.id];
+  const prevAttempts=sub.subAttempts||0;
+  let hintHTML=`<span class="sub-hint-txt">답안을 자유롭게 기술하세요. 키워드 ${card.keywords.length}개 포함 예상</span>`;
+  if(prevAttempts===0) hintHTML+=' <span style="font-size:10px;color:var(--text3)">· 첫 시도</span>';
+
+  const charCount=document.createElement('span');
+  charCount.className='sub-char-count';
+  charCount.id='sub-char-count';
+  charCount.textContent='0자';
+  hintRow.innerHTML=hintHTML;
+  hintRow.appendChild(charCount);
+  wrap.appendChild(hintRow);
+
+  const ta=document.createElement('textarea');
+  ta.className='sub-textarea';
+  ta.id='sub-textarea';
+  ta.placeholder='여기에 답안을 작성하세요...\n예: 의의는 ○○이고, 취지는 ○○이며, 요건은 ①○○ ②○○ ③○○이다.';
+  ta.oninput=()=>{document.getElementById('sub-char-count').textContent=ta.value.length+'자';};
+  wrap.appendChild(ta);
+
+  // keyword hint button (reveal after 2+ wrong attempts)
+  if(sub.subAttempts>1 && sub.subCorrect===0){
+    const hBtn=document.createElement('button');
+    hBtn.className='keyword-hint-btn';
+    hBtn.style.marginTop='8px';
+    hBtn.textContent='💡 키워드 힌트 보기';
+    hBtn.onclick=()=>{
+      hBtn.textContent='힌트: '+card.keywords.slice(0,3).join(' / ')+'...';
+      hBtn.style.color='var(--gold)';
+      hBtn.style.borderColor='var(--gold)';
+    };
+    wrap.appendChild(hBtn);
+  }
+  container.appendChild(wrap);
+
+  updateSubProgress();
+}
+
+function gradeSubjective(){
+  if(subGraded)return;
+  const card=currentDeck[currentIdx];
+  const ta=document.getElementById('sub-textarea');
+  const userAnswer=ta.value.trim();
+
+  if(!userAnswer){showToast('답안을 입력해주세요.');return;}
+
+  subGraded=true;
+  document.getElementById('sub-submit-row').style.display='none';
+
+  const {score,matched,missed}=gradeAnswer(userAnswer,card.keywords,card.a);
+  const info=getGradeInfo(score);
+
+  // Build grade result UI
+  const area=document.getElementById('grade-result-area');
+  const autoCorrect=score>=65;
+
+  area.innerHTML=`
+<div class="grade-result">
+  <div class="grade-header" style="background:var(--bg2);">
+    <div class="grade-score-circle ${info.cls}">${score}%</div>
+    <div>
+      <div class="grade-msg">${info.label}</div>
+      <div class="grade-sub-msg">${info.msg} · 키워드 매칭: ${matched.length}/${card.keywords.length}</div>
+    </div>
+  </div>
+  <div class="grade-body">
+    <div class="grade-comparison">
+      <div class="gc-panel gc-panel-your">
+        <div class="gc-panel-label gpl-your">내 답안</div>
+        <div class="gc-panel-text">${userAnswer.replace(/\n/g,'<br>')}</div>
+      </div>
+      <div class="gc-panel gc-panel-correct">
+        <div class="gc-panel-label gpl-correct">모범 답안</div>
+        <div class="gc-panel-text">${card.a}</div>
+      </div>
+    </div>
+    <div class="kw-match-row">
+      <div class="kw-label">키워드 분석</div>
+      <div class="kw-chips">
+        ${matched.map(k=>`<span class="kw-chip kw-hit">✓ ${k}</span>`).join('')}
+        ${missed.map(k=>`<span class="kw-chip kw-miss">✗ ${k}</span>`).join('')}
+      </div>
+    </div>
+    <div class="self-eval-row">
+      <div style="font-size:11px;color:var(--text3);text-align:center;width:100%;margin-bottom:8px;">모범답안과 비교 후 최종 평가를 선택하세요</div>
+    </div>
+    <div class="self-eval-row">
+      <button class="self-eval-btn seb-correct" onclick="finalizeSubjective(true)">✅ 정답으로 인정</button>
+      <button class="self-eval-btn seb-wrong" onclick="finalizeSubjective(false)">❌ 오답으로 처리</button>
+    </div>
+  </div>
+</div>`;
+
+  // Scroll to grade result
+  setTimeout(()=>area.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+}
+
+function finalizeSubjective(isCorrect){
+  const card=currentDeck[currentIdx];
+  const wasM=isMastered(card.id);
+  db[card.id]=updateSubjective({...db[card.id]},isCorrect);
+  saveDB();
+
+  if(isCorrect) sessionStats.correct++;
+  else{sessionStats.wrong++;currentDeck.push(card);}
+  if(!wasM&&isMastered(card.id)) sessionStats.masteryGained++;
+
+  // Disable buttons
+  document.querySelectorAll('.self-eval-btn').forEach(b=>{b.disabled=true;b.style.opacity='0.4';});
+
+  // Show next button
+  document.getElementById('sub-next-row').style.display='block';
+
+  const subC=db[card.id].subCorrect;
+  const need=3-subC;
+  if(isCorrect&&need>0){
+    showToast(`✍️ 주관식 정답! 완전 암기까지 ${need}회 더 필요`);
+  } else if(isCorrect&&need<=0){
+    const fcOK=db[card.id].fcInterval>=21;
+    if(fcOK) showToast('⭐ 완전 암기 달성!');
+    else showToast('✍️ 주관식 조건 충족! 플래시카드도 21일 이상 달성하면 완전 암기!');
+  }
+}
+
+function nextSubCard(){
+  currentIdx++;
+  loadSubjective();
+}
+
+function skipSubCard(){
+  currentIdx++;
+  loadSubjective();
+}
+
+function updateSubProgress(){
+  const tot=currentDeck.length,pct=tot>0?Math.round(currentIdx/tot*100):0;
+  document.getElementById('sub-prog-fill').style.width=pct+'%';
+  document.getElementById('sub-counter').textContent=`${currentIdx+1} / ${tot}`;
+  document.getElementById('sub-mode-label').textContent=currentMode==='sub-review'?'SUB DUE':'WRITE';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  QUIZ
+// ═══════════════════════════════════════════════════════════
+function buildDistractors(card,n=3){
+  const pool=CARDS.filter(c=>c.id!==card.id&&c.field===card.field);
+  const wide=CARDS.filter(c=>c.id!==card.id);
+  return shuffle(pool.length>=n?pool:wide).slice(0,n).map(c=>c.a);
+}
+function stripHTML(s){const d=document.createElement('div');d.innerHTML=s;return d.textContent||d.innerText||s;}
+
+function loadQuiz(){
+  const max=Math.min(currentDeck.length,25);
+  if(currentIdx>=max){showResult();return;}
+  showScreen('screen-quiz');
+  quizAnswered=false;
+  const card=currentDeck[currentIdx];
+  const correct=card.a;
+  const opts=shuffle([correct,...buildDistractors(card)]);
+  document.getElementById('quiz-law-badge').textContent=`${card.law} · ${card.sub} [${card.field}]`;
+  document.getElementById('quiz-question').textContent=card.q;
+  const oc=document.getElementById('quiz-options');
+  oc.innerHTML='';
+  opts.forEach((opt,i)=>{
+    const btn=document.createElement('div');
+    btn.className='quiz-opt';
+    btn.innerHTML=`<span class="opt-num">${i+1}</span><span>${stripHTML(opt)}</span>`;
+    btn.onclick=()=>selectQuizAnswer(btn,opt===correct,correct,card);
+    oc.appendChild(btn);
+  });
+  const fb=document.getElementById('quiz-feedback');
+  fb.style.display='none';fb.className='quiz-feedback';
+  document.getElementById('quiz-next-btn').style.display='none';
+  const pct=Math.round(currentIdx/max*100);
+  document.getElementById('quiz-prog-fill').style.width=pct+'%';
+  document.getElementById('quiz-counter').textContent=`${currentIdx+1} / ${max}`;
+}
+
+function selectQuizAnswer(btn,isCorrect,correctAns,card){
+  if(quizAnswered)return;
+  quizAnswered=true;
+  document.querySelectorAll('.quiz-opt').forEach(o=>{
+    o.classList.add('locked');
+    if(stripHTML(o.querySelector('span:last-child').textContent)===stripHTML(correctAns)) o.classList.add('correct');
+  });
+  if(!isCorrect) btn.classList.add('wrong');
+  const fb=document.getElementById('quiz-feedback');
+  fb.style.display='block';
+  if(isCorrect){fb.className='quiz-feedback cfb';fb.textContent='✅ 정답입니다!';sessionStats.correct++;}
+  else{fb.className='quiz-feedback wfb';fb.innerHTML=`❌ 오답입니다.<br><span class="fb-correct">✔ 정답: </span>${correctAns}`;sessionStats.wrong++;}
+  db[card.id]=sm2({...db[card.id]},isCorrect?2:0);
+  saveDB();
+  document.getElementById('quiz-next-btn').style.display='inline-block';
+}
+function nextQuiz(){currentIdx++;loadQuiz();}
+
+// ═══════════════════════════════════════════════════════════
+//  RESULT
+// ═══════════════════════════════════════════════════════════
+function showResult(){
+  const tot=sessionStats.correct+sessionStats.wrong;
+  const pct=tot>0?Math.round(sessionStats.correct/tot*100):0;
+  document.getElementById('res-score').textContent=pct+'%';
+  document.getElementById('res-correct').textContent=sessionStats.correct;
+  document.getElementById('res-wrong').textContent=sessionStats.wrong;
+  document.getElementById('res-new').textContent=sessionStats.newCards;
+  const modeLabels={flashcard:'플래시카드 세션',review:'복습 세션',subjective:'주관식 세션','sub-review':'주관식 복습 세션',quiz:'퀴즈 세션'};
+  document.getElementById('res-mode-label').textContent=modeLabels[currentMode]||'학습 세션';
+  const mg=sessionStats.masteryGained;
+  document.getElementById('res-mastery-gained').textContent=mg>0?`⭐ 이번 세션에서 ${mg}개 완전 암기 달성!`:'';
+  const fcDue=CARDS.filter(c=>isFCDue(c.id)).length;
+  const subDue=CARDS.filter(c=>isSubDue(c.id)).length;
+  document.getElementById('res-next-due').textContent=`플래시카드 복습 예정: ${fcDue}개 · 주관식 복습 예정: ${subDue}개`;
+  showScreen('screen-result');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PROGRESS
+// ═══════════════════════════════════════════════════════════
+function filterProgress(filter,tabEl){
+  document.querySelectorAll('#prog-tabs .nav-tab').forEach(t=>t.classList.remove('active'));
+  tabEl.classList.add('active');
+  renderProgress(filter);
+}
+
+function renderProgress(filter){
+  const grid=document.getElementById('progress-grid');
+  grid.innerHTML='';
+  let cards=[...CARDS];
+  const now=Date.now();
+  if(filter==='new') cards=cards.filter(c=>!db[c.id]||db[c.id].fcReps===0);
+  else if(filter==='learning') cards=cards.filter(c=>db[c.id]&&db[c.id].fcReps>0&&!isMastered(c.id));
+  else if(filter==='mastered') cards=cards.filter(c=>isMastered(c.id));
+  else if(filter==='due') cards=cards.filter(c=>isFCDue(c.id)||isSubDue(c.id));
+  if(cards.length===0){
+    grid.innerHTML='<div style="text-align:center;color:var(--text3);padding:40px;">해당하는 카드가 없습니다</div>';
+    return;
+  }
+  cards.forEach(card=>{
+    const s=db[card.id];
+    const isNew=!s||s.fcReps===0;
+    const mastered=isMastered(card.id);
+    const fcPct=s?Math.min(100,Math.round(s.fcInterval/30*100)):0;
+    const subPct=s?Math.min(100,Math.round(s.subCorrect/3*100)):0;
+    const fcDue=isFCDue(card.id);
+    const subDue=isSubDue(card.id);
+    let tag='';
+    if(mastered) tag='<span class="mastered-tag">⭐암기완료</span>';
+    else if(isNew) tag='<span class="new-tag">신규</span>';
+    else tag='<span class="learning-tag">학습중</span>';
+    const daysUntilFC=s&&s.fcNextDue>now?Math.ceil((s.fcNextDue-now)/86400000):0;
+    const fcNext=isNew?'미학습':fcDue?'FC 복습필요':`FC ${daysUntilFC}일 후`;
+    const subNext=s&&s.subAttempts>0?(subDue?'주관식 복습필요':`SUB ${s.subCorrect}/3`):('주관식 미시도');
+
+    const row=document.createElement('div');
+    row.className='prog-row';
+    row.innerHTML=`
+<div class="prog-law">${card.law}</div>
+<div class="prog-name">${card.q.length>30?card.q.slice(0,30)+'…':card.q}</div>
+<div>${tag}</div>
+<div class="prog-tracks">
+  <div class="prog-track-row"><span class="pt-label ptl-fc">FC</span><div class="pt-bar"><div class="pt-fill-fc" style="width:${fcPct}%"></div></div></div>
+  <div class="prog-track-row"><span class="pt-label ptl-sub">주관</span><div class="pt-bar"><div class="pt-fill-sub" style="width:${subPct}%"></div></div></div>
+</div>
+<div class="prog-interval" style="font-size:10px;color:var(--text3);text-align:right;min-width:90px;">${fcNext}<br>${subNext}</div>`;
+    grid.appendChild(row);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+function resetAll(){
+  if(!confirm('모든 학습 데이터(플래시카드 + 주관식)를 초기화하시겠습니까?')) return;
+  localStorage.removeItem(SK);
+  localStorage.removeItem('patentHist_v2');
+  db={};loadDB();updateHome();
+  showToast('전체 초기화 완료');
+}
+
+// INIT
+loadDB();
+updateHome();
+</script>
+</body>
+</html>
